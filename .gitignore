@@ -1,0 +1,17 @@
+.env
+node_modules
+requirements.txt
+
+# Virtual Environment
+venv/
+env/
+.env/
+.venv/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
