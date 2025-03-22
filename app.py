@@ -2,7 +2,9 @@ import gradio as gr
 from openai import OpenAI
 import os
 import time
+from dotenv import load_dotenv
 
+load_dotenv()
 def predict(message, history, system_prompt, model, max_tokens, temperature, top_p):
 
     # Initialize the OpenAI client
