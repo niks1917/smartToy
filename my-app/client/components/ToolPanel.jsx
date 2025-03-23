@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 
-const functionDescription = `
-Call this function when a user asks for a color palette.
-`;
+// const functionDescription = `
+// Call this function when a user asks for a color palette.
+// `;
 
 const sessionUpdate = {
   type: "session.update",
@@ -12,31 +12,31 @@ const sessionUpdate = {
   },
 };
 
-function FunctionCallOutput({ functionCallOutput }) {
-  const { theme, colors } = JSON.parse(functionCallOutput.arguments);
+// function FunctionCallOutput({ functionCallOutput }) {
+//   // const { theme, colors } = JSON.parse(functionCallOutput.arguments);
 
-  const colorBoxes = colors.map((color) => (
-    <div
-      key={color}
-      className="w-full h-16 rounded-md flex items-center justify-center border border-gray-200"
-      style={{ backgroundColor: color }}
-    >
-      <p className="text-sm font-bold text-black bg-slate-100 rounded-md p-2 border border-black">
-        {color}
-      </p>
-    </div>
-  ));
+//   // const colorBoxes = colors.map((color) => (
+//   //   <div
+//   //     key={color}
+//   //     className="w-full h-16 rounded-md flex items-center justify-center border border-gray-200"
+//   //     style={{ backgroundColor: color }}
+//   //   >
+//   //     <p className="text-sm font-bold text-black bg-slate-100 rounded-md p-2 border border-black">
+//   //       {color}
+//   //     </p>
+//   //   </div>
+//   // ));
 
-  return (
-    <div className="flex flex-col gap-2">
-      <p>Theme: {theme}</p>
-      {colorBoxes}
-      <pre className="text-xs bg-gray-100 rounded-md p-2 overflow-x-auto">
-        {JSON.stringify(functionCallOutput, null, 2)}
-      </pre>
-    </div>
-  );
-}
+//   return (
+//     <div className="flex flex-col gap-2">
+//       <p>Theme: {theme}</p>
+//       {colorBoxes}
+//       <pre className="text-xs bg-gray-100 rounded-md p-2 overflow-x-auto">
+//         {JSON.stringify(functionCallOutput, null, 2)}
+//       </pre>
+//     </div>
+//   );
+// }
 
 export default function ToolPanel({
   isSessionActive,
@@ -66,17 +66,6 @@ export default function ToolPanel({
           output.name === "display_color_palette"
         ) {
           setFunctionCallOutput(output);
-          setTimeout(() => {
-            sendClientEvent({
-              type: "response.create",
-              response: {
-                instructions: `
-                ask for feedback about the color palette - don't repeat 
-                the colors, just ask if they like the colors.
-              `,
-              },
-            });
-          }, 500);
         }
       });
     }
@@ -92,15 +81,15 @@ export default function ToolPanel({
   return (
     <section className="h-full w-full flex flex-col gap-4">
       <div className="h-full bg-gray-50 rounded-md p-4">
-        <h2 className="text-lg font-bold">Color Palette Tool</h2>
+        <h2 className="text-lg font-bold">Socratic Tutor</h2>
         {isSessionActive ? (
           functionCallOutput ? (
             <FunctionCallOutput functionCallOutput={functionCallOutput} />
           ) : (
-            <p>Ask for advice on a color palette...</p>
+            <p>Let's get started with breadboarding</p>
           )
         ) : (
-          <p>Start the session to use this tool...</p>
+          <p>Start the session to begin building...</p>
         )}
       </div>
     </section>
