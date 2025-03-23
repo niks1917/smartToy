@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import logo from "/assets/openai-logomark.svg";
-import EventLog from "./EventLog";
+import logo from "/assets/panda.jpeg";
 import SessionControls from "./SessionControls";
 import ToolPanel from "./ToolPanel";
 
@@ -188,38 +187,64 @@ Then place your breadboard on a flat surface and follow these three steps: Inser
   }, [dataChannel]);
 
   return (
-    <>
-      <nav className="absolute top-0 left-0 right-0 h-16 flex items-center">
-        <div className="flex items-center gap-4 w-full m-4 pb-2 border-0 border-b border-solid border-gray-200">
-          <img style={{ width: "24px" }} src={logo} />
-          <h1>realtime console</h1>
-        </div>
-      </nav>
-      <main className="absolute top-16 left-0 right-0 bottom-0">
-        <section className="absolute top-0 left-0 right-[380px] bottom-0 flex">
-          <section className="absolute top-0 left-0 right-0 bottom-32 px-4 overflow-y-auto">
-            <EventLog events={events} />
-          </section>
-          <section className="absolute h-32 left-0 right-0 bottom-0 p-4">
-            <SessionControls
-              startSession={startSession}
-              stopSession={stopSession}
-              sendClientEvent={sendClientEvent}
-              sendTextMessage={sendTextMessage}
-              events={events}
-              isSessionActive={isSessionActive}
-            />
-          </section>
-        </section>
-        <section className="absolute top-0 w-[380px] right-0 bottom-0 p-4 pt-0 overflow-y-auto">
-          <ToolPanel
-            sendClientEvent={sendClientEvent}
-            sendTextMessage={sendTextMessage}
-            events={events}
-            isSessionActive={isSessionActive}
+    <div className="h-screen w-screen flex items-center justify-center bg-white">
+      <div className="flex flex-col items-center gap-12">
+        <h1 className="text-2xl font-bold text-gray-800 max-w-xl text-center">
+          Bop us in the tummies to start learning!
+        </h1>
+        <div className="relative"> {/* Container for pandas and speech bubbles */}
+          <img
+            src={logo}
+            alt="Winnie and Po Pandas"
+            className="w-64 h-64 object-contain"
           />
-        </section>
-      </main>
-    </>
+         
+          {/* Speech bubble for Winnie */}
+          <div className="absolute left-0 top-0 transform -translate-y-8 -translate-x-4">
+            <div className="bg-white rounded-2xl p-2 shadow-lg relative">
+              <div className="text-sm font-medium">Hi! I'm Winnie!</div>
+              {/* Speech bubble triangle */}
+              <div className="absolute bottom-0 left-8 transform translate-y-2">
+                <div className="w-4 h-4 bg-white rotate-45 transform origin-center"></div>
+              </div>
+            </div>
+          </div>
+           {/* Speech bubble for Po */}
+          <div className="absolute right-0 top-0 transform -translate-y-8 translate-x-4">
+            <div className="bg-white rounded-2xl p-2 shadow-lg relative">
+              <div className="text-sm font-medium">Hi! I'm Po!</div>
+              {/* Speech bubble triangle */}
+              <div className="absolute bottom-0 right-8 transform translate-y-2">
+                <div className="w-4 h-4 bg-white rotate-45 transform origin-center"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+       
+        {/* Rest of your code for audio wave and stop button */}
+        {isSessionActive && (
+          <>
+            <img
+              src="/assets/icons8-audio-wave.gif"
+              alt="Audio Visualization"
+              className="w-32 h-32 mt-4"
+            />
+            <button
+              onClick={stopSession}
+              className="mt-8 px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            >
+              Stop
+            </button>
+          </>
+        )}
+         {!isSessionActive && (
+          <div
+            className="cursor-pointer absolute inset-0"
+            onClick={startSession}
+          />
+        )}
+      </div>
+    </div>
   );
+ 
 }
