@@ -5,7 +5,7 @@ import "dotenv/config";
 
 const app = express();
 const port = process.env.PORT || 3000;
-const apiKey = process.env.OPENAI_API_KEY;
+const apiKey = process.env.API_TOKEN;
 
 // Configure Vite middleware for React client
 const vite = await createViteServer({
