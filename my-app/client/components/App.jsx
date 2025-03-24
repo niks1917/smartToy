@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import logo from "/assets/panda.jpeg";
 import SessionControls from "./SessionControls";
 import ToolPanel from "./ToolPanel";
+import Chat from "./Chat";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export default function App() {
   const [isSessionActive, setIsSessionActive] = useState(false);
@@ -9,6 +11,8 @@ export default function App() {
   const [dataChannel, setDataChannel] = useState(null);
   const peerConnection = useRef(null);
   const audioElement = useRef(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   console.log("App component is running"); // Line added to test whether this is running
 
@@ -201,6 +205,13 @@ const TrainingExamples =  [
           event.timestamp = new Date().toLocaleTimeString();
         }
 
+        if (event.type === 'conversation.item.input_audio_transcription.completed') {
+          console.log('Input Transcription:', event.transcript);
+        }
+        else if (event.type === 'response.audio_transcript.done') {
+          console.log('Output Transcription:', event.transcript);
+        }
+        
         setEvents((prev) => [event, ...prev]);
       });
 
@@ -214,64 +225,77 @@ const TrainingExamples =  [
   }, [dataChannel]);
 
   return (
-    <div className="h-screen w-screen flex items-center justify-center bg-white">
-      <div className="flex flex-col items-center gap-12">
-        <h1 className="text-2xl font-bold text-gray-800 max-w-xl text-center">
-          Bop us in the tummies to start learning!
-        </h1>
-        <div className="relative"> {/* Container for pandas and speech bubbles */}
-          <img
-            src={logo}
-            alt="Winnie and Po Pandas"
-            className="w-64 h-64 object-contain"
-          />
-         
-          {/* Speech bubble for Winnie */}
-          <div className="absolute left-0 top-0 transform -translate-y-8 -translate-x-4">
-            <div className="bg-white rounded-2xl p-2 shadow-lg relative">
-              <div className="text-sm font-medium">Hi! I'm Winnie!</div>
-              {/* Speech bubble triangle */}
-              <div className="absolute bottom-0 left-8 transform translate-y-2">
-                <div className="w-4 h-4 bg-white rotate-45 transform origin-center"></div>
+    <>
+      {location?.pathname === '/chat' ? (
+        <Chat events={events} />
+      ) : (
+        <div className="h-screen w-screen flex items-center justify-center bg-white">
+          <div className="flex flex-col items-center gap-12">
+            <h1 className="text-2xl font-bold text-gray-800 max-w-xl text-center">
+              Bop us in the tummies to start learning!
+            </h1>
+            <div className="relative"> {/* Container for pandas and speech bubbles */}
+              <img
+                src={logo}
+                alt="Winnie and Po Pandas"
+                className="w-64 h-64 object-contain"
+              />
+             
+              {/* Speech bubble for Winnie */}
+              <div className="absolute left-0 top-0 transform -translate-y-8 -translate-x-4">
+                <div className="bg-white rounded-2xl p-2 shadow-lg relative">
+                  <div className="text-sm font-medium">Hi! I'm Winnie!</div>
+                  {/* Speech bubble triangle */}
+                  <div className="absolute bottom-0 left-8 transform translate-y-2">
+                    <div className="w-4 h-4 bg-white rotate-45 transform origin-center"></div>
+                  </div>
+                </div>
+              </div>
+               {/* Speech bubble for Po */}
+              <div className="absolute right-0 top-0 transform -translate-y-8 translate-x-4">
+                <div className="bg-white rounded-2xl p-2 shadow-lg relative">
+                  <div className="text-sm font-medium">Hi! I'm Po!</div>
+                  {/* Speech bubble triangle */}
+                  <div className="absolute bottom-0 right-8 transform translate-y-2">
+                    <div className="w-4 h-4 bg-white rotate-45 transform origin-center"></div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-           {/* Speech bubble for Po */}
-          <div className="absolute right-0 top-0 transform -translate-y-8 translate-x-4">
-            <div className="bg-white rounded-2xl p-2 shadow-lg relative">
-              <div className="text-sm font-medium">Hi! I'm Po!</div>
-              {/* Speech bubble triangle */}
-              <div className="absolute bottom-0 right-8 transform translate-y-2">
-                <div className="w-4 h-4 bg-white rotate-45 transform origin-center"></div>
-              </div>
-            </div>
+           
+            {/* Rest of your code for audio wave and stop button */}
+            {isSessionActive && (
+              <>
+                <img
+                  src="/assets/icons8-audio-wave.gif"
+                  alt="Audio Visualization"
+                  className="w-32 h-32 mt-4"
+                />
+                <div className="flex gap-4">
+                  <button
+                    onClick={stopSession}
+                    className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                  >
+                    Stop
+                  </button>
+                  <button
+                    onClick={() => navigate('/chat')}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    View Chat
+                  </button>
+                </div>
+              </>
+            )}
+             {!isSessionActive && (
+              <div
+                className="cursor-pointer absolute inset-0"
+                onClick={startSession}
+              />
+            )}
           </div>
         </div>
-       
-        {/* Rest of your code for audio wave and stop button */}
-        {isSessionActive && (
-          <>
-            <img
-              src="/assets/icons8-audio-wave.gif"
-              alt="Audio Visualization"
-              className="w-32 h-32 mt-4"
-            />
-            <button
-              onClick={stopSession}
-              className="mt-8 px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-            >
-              Stop
-            </button>
-          </>
-        )}
-         {!isSessionActive && (
-          <div
-            className="cursor-pointer absolute inset-0"
-            onClick={startSession}
-          />
-        )}
-      </div>
-    </div>
+      )}
+    </>
   );
- 
 }
