@@ -1,21 +1,10 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
+import { join, dirname, resolve } from "path";
+import { fileURLToPath } from "url";
+import react from "@vitejs/plugin-react";
 
-export default defineConfig({
+const path = fileURLToPath(import.meta.url);
+
+export default {
+  root: join(dirname(path), "client"),
   plugins: [react()],
-  server: {
-    port: 3000,
-  },
-  build: {
-    outDir: 'dist',
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html'),
-      },
-    },
-  },
-  ssr: {
-    noExternal: ['react-router-dom'],
-  },
-});
+};

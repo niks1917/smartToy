@@ -3,18 +3,50 @@ import logo from "/assets/panda.jpeg";
 import SessionControls from "./SessionControls";
 import ToolPanel from "./ToolPanel";
 import Chat from "./Chat";
-import { useLocation, useNavigate } from "react-router-dom";
+
+// Helper function to safely access localStorage
+const getLocalStorage = () => {
+  if (typeof window !== 'undefined') {
+    return window.localStorage;
+  }
+  return null;
+};
 
 export default function App() {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [events, setEvents] = useState([]);
+  const [chatEvents, setChatEvents] = useState([]);
   const [dataChannel, setDataChannel] = useState(null);
   const peerConnection = useRef(null);
   const audioElement = useRef(null);
-  const navigate = useNavigate();
-  const location = useLocation();
 
   console.log("App component is running"); // Line added to test whether this is running
+
+  // Initialize chat events from localStorage when component mounts
+  useEffect(() => {
+    const storage = getLocalStorage();
+    if (storage) {
+      const savedEvents = storage.getItem('chatEvents');
+      if (savedEvents) {
+        setChatEvents(JSON.parse(savedEvents));
+      }
+    }
+  }, []);
+
+  // Listen for storage events from other tabs
+  useEffect(() => {
+    const storage = getLocalStorage();
+    if (!storage) return;
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'chatEvents') {
+        setChatEvents(JSON.parse(e.newValue || '[]'));
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   async function startSession() {
     // Get a session token for OpenAI Realtime API
@@ -81,7 +113,7 @@ and iterate as a result of this, but let them discover the takeaway themselves a
 
 const TrainingExamples =  [
   { exchange_id: 1, role: "learner", content: "Maybe... with a motor? Or batteries?" },
-  { exchange_id: 2, role: "guide", content: "Interesting! What’s something that’s full of energy, but doesn’t need batteries?", pedagogical_strategy: "elaboration" },
+  { exchange_id: 2, role: "guide", content: "Interesting! What's something that's full of energy, but doesn't need batteries?", pedagogical_strategy: "elaboration" },
 
   { exchange_id: 3, role: "learner", content: "Uhh... a spring? Or... a balloon?" },
   { exchange_id: 4, role: "guide", content: "Nice! A balloon is full of air — and air can be powerful, right? What do you think would happen if you let go of a blown-up balloon?", pedagogical_strategy: "collaborative completion" },
@@ -89,11 +121,11 @@ const TrainingExamples =  [
   { exchange_id: 5, role: "learner", content: "It flies all over the place!" },
   { exchange_id: 6, role: "guide", content: "Exactly. So what if we could aim that balloon and turn it into an engine?", pedagogical_strategy: "elaboration" },
 
-  { exchange_id: 7, role: "learner", content: "Cool! Let’s try it!" },
+  { exchange_id: 7, role: "learner", content: "Cool! Let's try it!" },
   { exchange_id: 8, role: "guide", content: "What parts do you think we need to build a car?", pedagogical_strategy: "collaborative completion" },
 
-  { exchange_id: 9, role: "learner", content: "Just the balloon. I can tape it to the floor and it’ll fly forward!" },
-  { exchange_id: 10, role: "guide", content: "Just the balloon? Let’s think that through together. Will it roll across the floor without any wheels?", pedagogical_strategy: "repetition" },
+  { exchange_id: 9, role: "learner", content: "Just the balloon. I can tape it to the floor and it'll fly forward!" },
+  { exchange_id: 10, role: "guide", content: "Just the balloon? Let's think that through together. Will it roll across the floor without any wheels?", pedagogical_strategy: "repetition" },
 
   { exchange_id: 11, role: "learner", content: "Hmm… maybe not. It might just spin around." },
   { exchange_id: 12, role: "guide", content: "What might help it roll in a straight line?", pedagogical_strategy: "collaborative completion" },
@@ -148,6 +180,13 @@ const TrainingExamples =  [
       peerConnection.current.close();
     }
 
+    // Clear chat events from localStorage when stopping the session
+    const storage = getLocalStorage();
+    if (storage) {
+      storage.removeItem('chatEvents');
+      setChatEvents([]);
+    }
+
     setIsSessionActive(false);
     setDataChannel(null);
     peerConnection.current = null;
@@ -166,7 +205,23 @@ const TrainingExamples =  [
       if (!message.timestamp) {
         message.timestamp = timestamp;
       }
+
+      // Update events state as before
       setEvents((prev) => [message, ...prev]);
+
+      // // Only store chat-relevant events in chatEvents
+      // if (message.type === 'conversation.item.create' || 
+      //     message.type === 'conversation.item.input_audio_transcription.completed' ||
+      //     message.type === 'response.audio_transcript.done') {
+      //   setChatEvents((prev) => {
+      //     const newEvents = [message, ...prev];
+      //     const storage = getLocalStorage();
+      //     if (storage) {
+      //       storage.setItem('chatEvents', JSON.stringify(newEvents));
+      //     }
+      //     return newEvents;
+      //   });
+      // }
     } else {
       console.error(
         "Failed to send message - no data channel available",
@@ -205,97 +260,96 @@ const TrainingExamples =  [
           event.timestamp = new Date().toLocaleTimeString();
         }
 
-        if (event.type === 'conversation.item.input_audio_transcription.completed') {
-          console.log('Input Transcription:', event.transcript);
-        }
-        else if (event.type === 'response.audio_transcript.done') {
-          console.log('Output Transcription:', event.transcript);
-        }
-        
+        // Update events state as before
         setEvents((prev) => [event, ...prev]);
+
+        // Only store chat-relevant events in chatEvents
+        if (event.type === 'conversation.item.input_audio_transcription.completed' ||
+            event.type === 'response.audio_transcript.done' ||
+            event.type === 'conversation.item.create') {
+          console.log('Chat Event:', event.type);
+          setChatEvents((prev) => {
+            const newEvents = [event, ...prev];
+            const storage = getLocalStorage();
+            if (storage) {
+              storage.setItem('chatEvents', JSON.stringify(newEvents));
+            }
+            return newEvents;
+          });
+        }
       });
 
       // Set session active when the data channel is opened
       dataChannel.addEventListener("open", () => {
         setIsSessionActive(true);
-        setEvents([]);
         sendInitialPrompt();
       });
     }
   }, [dataChannel]);
 
-  return (
-    <>
-      {location?.pathname === '/chat' ? (
-        <Chat events={events} />
-      ) : (
-        <div className="h-screen w-screen flex items-center justify-center bg-white">
-          <div className="flex flex-col items-center gap-12">
-            <h1 className="text-2xl font-bold text-gray-800 max-w-xl text-center">
-              Bop us in the tummies to start learning!
-            </h1>
-            <div className="relative"> {/* Container for pandas and speech bubbles */}
-              <img
-                src={logo}
-                alt="Winnie and Po Pandas"
-                className="w-64 h-64 object-contain"
-              />
-             
-              {/* Speech bubble for Winnie */}
-              <div className="absolute left-0 top-0 transform -translate-y-8 -translate-x-4">
-                <div className="bg-white rounded-2xl p-2 shadow-lg relative">
-                  <div className="text-sm font-medium">Hi! I'm Winnie!</div>
-                  {/* Speech bubble triangle */}
-                  <div className="absolute bottom-0 left-8 transform translate-y-2">
-                    <div className="w-4 h-4 bg-white rotate-45 transform origin-center"></div>
-                  </div>
-                </div>
-              </div>
-               {/* Speech bubble for Po */}
-              <div className="absolute right-0 top-0 transform -translate-y-8 translate-x-4">
-                <div className="bg-white rounded-2xl p-2 shadow-lg relative">
-                  <div className="text-sm font-medium">Hi! I'm Po!</div>
-                  {/* Speech bubble triangle */}
-                  <div className="absolute bottom-0 right-8 transform translate-y-2">
-                    <div className="w-4 h-4 bg-white rotate-45 transform origin-center"></div>
-                  </div>
-                </div>
+  // Get the current path from window.location.pathname
+  const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+
+  return path === '/chat' ? (
+    <Chat events={chatEvents} />
+  ) : (
+    <div className="h-screen w-screen flex items-center justify-center bg-white">
+      <div className="flex flex-col items-center gap-12">
+        <h1 className="text-2xl font-bold text-gray-800 max-w-xl text-center">
+          Bop us in the tummies to start learning!
+        </h1>
+        <div className="relative">
+          <img
+            src={logo}
+            alt="Winnie and Po Pandas"
+            className="w-64 h-64 object-contain"
+          />
+         
+          {/* Speech bubble for Winnie */}
+          <div className="absolute left-0 top-0 transform -translate-y-8 -translate-x-4">
+            <div className="bg-white rounded-2xl p-2 shadow-lg relative">
+              <div className="text-sm font-medium">Hi! I'm Winnie!</div>
+              <div className="absolute bottom-0 left-8 transform translate-y-2">
+                <div className="w-4 h-4 bg-white rotate-45 transform origin-center"></div>
               </div>
             </div>
-           
-            {/* Rest of your code for audio wave and stop button */}
-            {isSessionActive && (
-              <>
-                <img
-                  src="/assets/icons8-audio-wave.gif"
-                  alt="Audio Visualization"
-                  className="w-32 h-32 mt-4"
-                />
-                <div className="flex gap-4">
-                  <button
-                    onClick={stopSession}
-                    className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-                  >
-                    Stop
-                  </button>
-                  <button
-                    onClick={() => navigate('/chat')}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    View Chat
-                  </button>
-                </div>
-              </>
-            )}
-             {!isSessionActive && (
-              <div
-                className="cursor-pointer absolute inset-0"
-                onClick={startSession}
-              />
-            )}
+          </div>
+          
+          {/* Speech bubble for Po */}
+          <div className="absolute right-0 top-0 transform -translate-y-8 translate-x-4">
+            <div className="bg-white rounded-2xl p-2 shadow-lg relative">
+              <div className="text-sm font-medium">Hi! I'm Po!</div>
+              <div className="absolute bottom-0 right-8 transform translate-y-2">
+                <div className="w-4 h-4 bg-white rotate-45 transform origin-center"></div>
+              </div>
+            </div>
           </div>
         </div>
-      )}
-    </>
+       
+        {isSessionActive && (
+          <>
+            <img
+              src="/assets/icons8-audio-wave.gif"
+              alt="Audio Visualization"
+              className="w-32 h-32 mt-4"
+            />
+            <div className="flex gap-4">
+              <button
+                onClick={stopSession}
+                className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                Stop
+              </button>
+            </div>
+          </>
+        )}
+        {!isSessionActive && (
+          <div
+            className="cursor-pointer absolute inset-0"
+            onClick={startSession}
+          />
+        )}
+      </div>
+    </div>
   );
 }
