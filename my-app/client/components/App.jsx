@@ -265,9 +265,8 @@ const TrainingExamples =  [
 
         // Only store chat-relevant events in chatEvents
         if (event.type === 'conversation.item.input_audio_transcription.completed' ||
-            event.type === 'response.audio_transcript.done' ||
-            event.type === 'conversation.item.create') {
-          console.log('Chat Event:', event.type);
+            event.type === 'response.audio_transcript.done') {
+          console.log('Chat Event:', event.transcript);
           setChatEvents((prev) => {
             const newEvents = [event, ...prev];
             const storage = getLocalStorage();
