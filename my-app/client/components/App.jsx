@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import logo from "/assets/panda.jpeg";
-import SessionControls from "./SessionControls";
-import ToolPanel from "./ToolPanel";
 import Chat from "./Chat";
 
 // Helper function to safely access localStorage
@@ -52,9 +50,7 @@ export default function App() {
     // Get a session token for OpenAI Realtime API
     const tokenResponse = await fetch("/token");
     const data = await tokenResponse.json();
-    console.log("Token response:", data); 
     const EPHEMERAL_KEY = data.client_secret.value;
-
     // Create a peer connection
     const pc = new RTCPeerConnection();
 
@@ -148,6 +144,17 @@ const TrainingExamples =  [
 
 
   function sendInitialPrompt() {
+    const sessionUpdate = {
+      type: "session.update",
+      session: {
+        input_audio_transcription: {
+          model: "whisper-1",
+          language: "en",
+        },
+      },
+    };
+    sendClientEvent(sessionUpdate);
+
     const systemPrompt = {
       type: "conversation.item.create",
       item: {
@@ -208,20 +215,6 @@ const TrainingExamples =  [
 
       // Update events state as before
       setEvents((prev) => [message, ...prev]);
-
-      // // Only store chat-relevant events in chatEvents
-      // if (message.type === 'conversation.item.create' || 
-      //     message.type === 'conversation.item.input_audio_transcription.completed' ||
-      //     message.type === 'response.audio_transcript.done') {
-      //   setChatEvents((prev) => {
-      //     const newEvents = [message, ...prev];
-      //     const storage = getLocalStorage();
-      //     if (storage) {
-      //       storage.setItem('chatEvents', JSON.stringify(newEvents));
-      //     }
-      //     return newEvents;
-      //   });
-      // }
     } else {
       console.error(
         "Failed to send message - no data channel available",
@@ -266,7 +259,6 @@ const TrainingExamples =  [
         // Only store chat-relevant events in chatEvents
         if (event.type === 'conversation.item.input_audio_transcription.completed' ||
             event.type === 'response.audio_transcript.done') {
-          console.log('Chat Event:', event.transcript);
           setChatEvents((prev) => {
             const newEvents = [event, ...prev];
             const storage = getLocalStorage();
@@ -281,6 +273,7 @@ const TrainingExamples =  [
       // Set session active when the data channel is opened
       dataChannel.addEventListener("open", () => {
         setIsSessionActive(true);
+        setEvents([]);
         sendInitialPrompt();
       });
     }
