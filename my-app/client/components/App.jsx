@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import logo from "/assets/panda.jpeg";
 import Chat from "./Chat";
+import playtoLogo from "/assets/playto-logo.png";
 
 // Helper function to safely access localStorage
 const getLocalStorage = () => {
@@ -287,6 +288,11 @@ const TrainingExamples =  [
   ) : (
     <div className="h-screen w-screen flex items-center justify-center bg-white">
       <div className="flex flex-col items-center gap-12">
+      <img 
+        src={playtoLogo} 
+        alt="Playto Logo" 
+        className="w-96 object-contain mb-1"  // Adjust width and margin as needed
+      />
         <h1 className="text-2xl font-bold text-gray-800 max-w-xl text-center">
           Bop us in the tummies to start learning!
         </h1>
