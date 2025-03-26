@@ -254,13 +254,13 @@ const TrainingExamples =  [
         }
 
         // Update events state as before
-        setEvents((prev) => [event, ...prev]);
+        setEvents((prev) => [...prev, event]);
 
         // Only store chat-relevant events in chatEvents
         if (event.type === 'conversation.item.input_audio_transcription.completed' ||
             event.type === 'response.audio_transcript.done') {
           setChatEvents((prev) => {
-            const newEvents = [event, ...prev];
+            const newEvents = [...prev, event];
             const storage = getLocalStorage();
             if (storage) {
               storage.setItem('chatEvents', JSON.stringify(newEvents));
