@@ -1,24 +1,56 @@
 import { useEffect, useRef, useState } from "react";
 import logo from "/assets/panda.jpeg";
-import SessionControls from "./SessionControls";
-import ToolPanel from "./ToolPanel";
+import Chat from "./Chat";
+
+// Helper function to safely access localStorage
+const getLocalStorage = () => {
+  if (typeof window !== 'undefined') {
+    return window.localStorage;
+  }
+  return null;
+};
 
 export default function App() {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [events, setEvents] = useState([]);
+  const [chatEvents, setChatEvents] = useState([]);
   const [dataChannel, setDataChannel] = useState(null);
   const peerConnection = useRef(null);
   const audioElement = useRef(null);
 
   console.log("App component is running"); // Line added to test whether this is running
 
+  // Initialize chat events from localStorage when component mounts
+  useEffect(() => {
+    const storage = getLocalStorage();
+    if (storage) {
+      const savedEvents = storage.getItem('chatEvents');
+      if (savedEvents) {
+        setChatEvents(JSON.parse(savedEvents));
+      }
+    }
+  }, []);
+
+  // Listen for storage events from other tabs
+  useEffect(() => {
+    const storage = getLocalStorage();
+    if (!storage) return;
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'chatEvents') {
+        setChatEvents(JSON.parse(e.newValue || '[]'));
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   async function startSession() {
     // Get a session token for OpenAI Realtime API
     const tokenResponse = await fetch("/token");
     const data = await tokenResponse.json();
-    console.log("Token response:", data); 
     const EPHEMERAL_KEY = data.client_secret.value;
-
     // Create a peer connection
     const pc = new RTCPeerConnection();
 
@@ -77,7 +109,7 @@ and iterate as a result of this, but let them discover the takeaway themselves a
 
 const TrainingExamples =  [
   { exchange_id: 1, role: "learner", content: "Maybe... with a motor? Or batteries?" },
-  { exchange_id: 2, role: "guide", content: "Interesting! What’s something that’s full of energy, but doesn’t need batteries?", pedagogical_strategy: "elaboration" },
+  { exchange_id: 2, role: "guide", content: "Interesting! What's something that's full of energy, but doesn't need batteries?", pedagogical_strategy: "elaboration" },
 
   { exchange_id: 3, role: "learner", content: "Uhh... a spring? Or... a balloon?" },
   { exchange_id: 4, role: "guide", content: "Nice! A balloon is full of air — and air can be powerful, right? What do you think would happen if you let go of a blown-up balloon?", pedagogical_strategy: "collaborative completion" },
@@ -85,11 +117,11 @@ const TrainingExamples =  [
   { exchange_id: 5, role: "learner", content: "It flies all over the place!" },
   { exchange_id: 6, role: "guide", content: "Exactly. So what if we could aim that balloon and turn it into an engine?", pedagogical_strategy: "elaboration" },
 
-  { exchange_id: 7, role: "learner", content: "Cool! Let’s try it!" },
+  { exchange_id: 7, role: "learner", content: "Cool! Let's try it!" },
   { exchange_id: 8, role: "guide", content: "What parts do you think we need to build a car?", pedagogical_strategy: "collaborative completion" },
 
-  { exchange_id: 9, role: "learner", content: "Just the balloon. I can tape it to the floor and it’ll fly forward!" },
-  { exchange_id: 10, role: "guide", content: "Just the balloon? Let’s think that through together. Will it roll across the floor without any wheels?", pedagogical_strategy: "repetition" },
+  { exchange_id: 9, role: "learner", content: "Just the balloon. I can tape it to the floor and it'll fly forward!" },
+  { exchange_id: 10, role: "guide", content: "Just the balloon? Let's think that through together. Will it roll across the floor without any wheels?", pedagogical_strategy: "repetition" },
 
   { exchange_id: 11, role: "learner", content: "Hmm… maybe not. It might just spin around." },
   { exchange_id: 12, role: "guide", content: "What might help it roll in a straight line?", pedagogical_strategy: "collaborative completion" },
@@ -112,6 +144,17 @@ const TrainingExamples =  [
 
 
   function sendInitialPrompt() {
+    const sessionUpdate = {
+      type: "session.update",
+      session: {
+        input_audio_transcription: {
+          model: "whisper-1",
+          language: "en",
+        },
+      },
+    };
+    sendClientEvent(sessionUpdate);
+
     const systemPrompt = {
       type: "conversation.item.create",
       item: {
@@ -144,6 +187,13 @@ const TrainingExamples =  [
       peerConnection.current.close();
     }
 
+    // Clear chat events from localStorage when stopping the session
+    const storage = getLocalStorage();
+    if (storage) {
+      storage.removeItem('chatEvents');
+      setChatEvents([]);
+    }
+
     setIsSessionActive(false);
     setDataChannel(null);
     peerConnection.current = null;
@@ -162,6 +212,8 @@ const TrainingExamples =  [
       if (!message.timestamp) {
         message.timestamp = timestamp;
       }
+
+      // Update events state as before
       setEvents((prev) => [message, ...prev]);
     } else {
       console.error(
@@ -201,7 +253,21 @@ const TrainingExamples =  [
           event.timestamp = new Date().toLocaleTimeString();
         }
 
+        // Update events state as before
         setEvents((prev) => [event, ...prev]);
+
+        // Only store chat-relevant events in chatEvents
+        if (event.type === 'conversation.item.input_audio_transcription.completed' ||
+            event.type === 'response.audio_transcript.done') {
+          setChatEvents((prev) => {
+            const newEvents = [event, ...prev];
+            const storage = getLocalStorage();
+            if (storage) {
+              storage.setItem('chatEvents', JSON.stringify(newEvents));
+            }
+            return newEvents;
+          });
+        }
       });
 
       // Set session active when the data channel is opened
@@ -213,13 +279,18 @@ const TrainingExamples =  [
     }
   }, [dataChannel]);
 
-  return (
+  // Get the current path from window.location.pathname
+  const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+
+  return path === '/chat' ? (
+    <Chat events={chatEvents} />
+  ) : (
     <div className="h-screen w-screen flex items-center justify-center bg-white">
       <div className="flex flex-col items-center gap-12">
         <h1 className="text-2xl font-bold text-gray-800 max-w-xl text-center">
           Bop us in the tummies to start learning!
         </h1>
-        <div className="relative"> {/* Container for pandas and speech bubbles */}
+        <div className="relative">
           <img
             src={logo}
             alt="Winnie and Po Pandas"
@@ -230,17 +301,16 @@ const TrainingExamples =  [
           <div className="absolute left-0 top-0 transform -translate-y-8 -translate-x-4">
             <div className="bg-white rounded-2xl p-2 shadow-lg relative">
               <div className="text-sm font-medium">Hi! I'm Winnie!</div>
-              {/* Speech bubble triangle */}
               <div className="absolute bottom-0 left-8 transform translate-y-2">
                 <div className="w-4 h-4 bg-white rotate-45 transform origin-center"></div>
               </div>
             </div>
           </div>
-           {/* Speech bubble for Po */}
+          
+          {/* Speech bubble for Po */}
           <div className="absolute right-0 top-0 transform -translate-y-8 translate-x-4">
             <div className="bg-white rounded-2xl p-2 shadow-lg relative">
               <div className="text-sm font-medium">Hi! I'm Po!</div>
-              {/* Speech bubble triangle */}
               <div className="absolute bottom-0 right-8 transform translate-y-2">
                 <div className="w-4 h-4 bg-white rotate-45 transform origin-center"></div>
               </div>
@@ -248,7 +318,6 @@ const TrainingExamples =  [
           </div>
         </div>
        
-        {/* Rest of your code for audio wave and stop button */}
         {isSessionActive && (
           <>
             <img
@@ -256,15 +325,17 @@ const TrainingExamples =  [
               alt="Audio Visualization"
               className="w-32 h-32 mt-4"
             />
-            <button
-              onClick={stopSession}
-              className="mt-8 px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-            >
-              Stop
-            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={stopSession}
+                className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                Stop
+              </button>
+            </div>
           </>
         )}
-         {!isSessionActive && (
+        {!isSessionActive && (
           <div
             className="cursor-pointer absolute inset-0"
             onClick={startSession}
@@ -273,5 +344,4 @@ const TrainingExamples =  [
       </div>
     </div>
   );
- 
 }
