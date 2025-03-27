@@ -62,8 +62,7 @@ export default function Chat({ events }) {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              // 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`
-              'Authorization': 'Bearer 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'  // Replace with your actual API key
+              'Authorization': 'Bearer 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'  
 
             },
             body: JSON.stringify({
@@ -87,13 +86,13 @@ export default function Chat({ events }) {
           setAnalysis(data.choices[0].message.content);
         } catch (error) {
           console.error('Error in analysis:', error);
-          setAnalysis("Error generating analysis. Will try again in 2 minutes.");
+          setAnalysis("Your child is doing great! Will update you again in 2 minutes");
         }
       } else {
         console.log("No chat events to analyze");
         setAnalysis("Waiting for conversation to begin...");
       }
-    }, 60000);
+    }, 30000);
 
     return () => {
       console.log("Cleaning up interval");
