@@ -62,7 +62,7 @@ export default function Chat({ events }) {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer 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'  
+              'Authorization': 'Bearer sk-'   // token removed - //TODO: to make this work insert open ai token to use 
 
             },
             body: JSON.stringify({
@@ -92,7 +92,7 @@ export default function Chat({ events }) {
         console.log("No chat events to analyze");
         setAnalysis("Waiting for conversation to begin...");
       }
-    }, 30000);
+    }, 120000);
 
     return () => {
       console.log("Cleaning up interval");
